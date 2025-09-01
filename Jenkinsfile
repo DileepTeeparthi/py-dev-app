@@ -5,7 +5,7 @@ pipeline {
         DOCKER_IMAGE = 'dileepteeparthi/devops-hello-world'
         DOCKER_TAG = "build-${env.BUILD_NUMBER}"
         // Jenkins credential ID for your container registry
-        REGISTRY_CREDENTIALS = credentials('devdoc')
+        REGISTRY_CREDENTIALS = credentials('docker-hub-credentials')
     }
     stages {
         stage('Checkout') {
