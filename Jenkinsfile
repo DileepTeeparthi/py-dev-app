@@ -11,7 +11,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 // Get the code from your repository - use the actual URL
-                git branch: 'main', url: 'https://github.com/DileepTeeparthi/py-dev-app.git', credentialsId: 'devdoc'
+                git branch: 'master', url: 'https://github.com/DileepTeeparthi/py-dev-app.git', credentialsId: 'devdoc'
             }
         }
         
