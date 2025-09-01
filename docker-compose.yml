@@ -1,0 +1,23 @@
+version: '3.8'
+services:
+  redis:
+    image: "redis:alpine"
+    networks:
+      - app-network
+    # No need to expose ports externally if only the app talks to it
+
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - REDIS_HOST=redis  # uses Docker Compose's DNS to find the 'redis' service
+      - HOSTNAME=local-docker
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
