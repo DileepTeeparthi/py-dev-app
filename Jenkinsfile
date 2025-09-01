@@ -2,10 +2,10 @@ pipeline {
     agent any
     environment {
         // Define environment variables
-        DOCKER_IMAGE = 'your-dockerhub-username/devops-hello-world'
+        DOCKER_IMAGE = 'dileepteeparthi/devops-hello-world'
         DOCKER_TAG = "build-${env.BUILD_NUMBER}"
         // Jenkins credential ID for your container registry
-        REGISTRY_CREDENTIALS = credentials('docker-hub-credentials')
+        REGISTRY_CREDENTIALS = credentials('devdoc')
     }
     stages {
         stage('Checkout') {
