@@ -29,7 +29,7 @@ pipeline {
                 // Start the stack and run tests - use bat for Windows
                 bat 'docker-compose up -d'
                 // Wait a few seconds for services to start
-                bat 'timeout /t 10 /nobreak > nul'
+                bat 'timeout /t 10 /nobreak'
                 // Run a simple test - check if the web server responds
                 bat 'curl -f http://localhost:5000 && echo ✓ Application responded successfully. || (echo ✗ Application failed to respond. & exit /b 1)'
             }
