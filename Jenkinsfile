@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Get the code from your repository - use the actual URL
+                // Get the code from your repository
                 git branch: 'master', url: 'https://github.com/DileepTeeparthi/py-dev-app.git', credentialsId: 'devdoc'
             }
         }
@@ -24,34 +24,35 @@ pipeline {
             }
         }
         
-       stage('Test with Docker Compose') {
-    steps {
-        bat 'docker-compose up -d'
-        // Use PowerShell to wait (more reliable)
-        powershell 'Start-Sleep -Seconds 10'
-        // Test the application
-        bat 'curl -f http://localhost:5000 && echo ✓ Application responded successfully. || (echo ✗ Application failed to respond. & exit /b 1)'
-    }
-    post {
-        always {
-            bat 'docker-compose down'
-        }
-    }
-}
-        
-        stage('Push to Registry') {
-    steps {
-        script {
-            docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-credentials') {
-                docker.image("dileepteeparthi/devops-hello-world:build-${BUILD_NUMBER}").push()
+        stage('Test with Docker Compose') {
+            steps {
+                bat 'docker-compose up -d'
+                // Use PowerShell to wait
+                powershell 'Start-Sleep -Seconds 10'
+                // Test the application
+                bat 'curl -f http://localhost:5000 && echo ✓ Application responded successfully. || (echo ✗ Application failed to respond. & exit /b 1)'
+            }
+            post {
+                always {
+                    bat 'docker-compose down'
+                }
             }
         }
-    }
-}
-
+        
+        stage('Push to Registry') {
+            steps {
+                script {
+                    // Use the environment variables instead of hardcoded values
+                    docker.withRegistry('', env.REGISTRY_CREDENTIALS) {
+                        docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").push()
+                        // Optional: push as latest
+                        docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").push('latest')
+                    }
+                }
+            }
+        }
         
         stage('Deploy to Staging') {
-            // This stage is optional - depends on your infrastructure
             steps {
                 echo "Deployment would happen here. Configure based on your environment."
             }
@@ -59,7 +60,7 @@ pipeline {
     }
     post {
         always {
-            // Clean up: remove built images to save disk space - use bat for Windows
+            // Clean up: remove built images to save disk space
             bat "docker rmi ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} 2>nul || echo Image not found, skipping delete"
         }
         success {
