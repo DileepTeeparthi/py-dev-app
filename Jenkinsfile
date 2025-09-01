@@ -10,8 +10,8 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Get the code from your repository
-                git branch: 'main', url: 'https://github.com/your-username/your-repo-name.git'
+                // Get the code from your repository - use the actual URL
+                git branch: 'main', url: 'https://github.com/DileepTeeparthi/py-dev-app.git', credentialsId: 'devdoc'
             }
         }
         
@@ -26,21 +26,17 @@ pipeline {
         
         stage('Test with Docker Compose') {
             steps {
-                // Start the stack and run tests
-                sh 'docker-compose up -d'
+                // Start the stack and run tests - use bat for Windows
+                bat 'docker-compose up -d'
                 // Wait a few seconds for services to start
-                sleep 10
+                bat 'timeout /t 10 /nobreak > nul'
                 // Run a simple test - check if the web server responds
-                sh '''
-                    curl -f http://localhost:5000 || exit 1
-                    echo "✓ Application responded successfully."
-                '''
-                // You can add more rigorous tests here (e.g., with pytest)
+                bat 'curl -f http://localhost:5000 && echo ✓ Application responded successfully. || (echo ✗ Application failed to respond. & exit /b 1)'
             }
             post {
                 always {
                     // Always tear down the test environment
-                    sh 'docker-compose down'
+                    bat 'docker-compose down'
                 }
             }
         }
@@ -62,28 +58,20 @@ pipeline {
         stage('Deploy to Staging') {
             // This stage is optional - depends on your infrastructure
             steps {
-                // Example: Deploy to a Kubernetes cluster
-                // sh 'kubectl apply -f k8s-deployment.yaml'
-                
-                // Or: Deploy to a server with Docker Compose
-                // sh 'scp docker-compose.prod.yml user@server:/app/ && ssh user@server "cd /app && docker-compose pull && docker-compose up -d"'
-                
                 echo "Deployment would happen here. Configure based on your environment."
             }
         }
     }
     post {
         always {
-            // Clean up: remove built images to save disk space
-            sh "docker rmi ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} || true"
+            // Clean up: remove built images to save disk space - use bat for Windows
+            bat "docker rmi ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} 2>nul || echo Image not found, skipping delete"
         }
         success {
             echo "Pipeline completed successfully! 🎉"
-            // Optional: Send notification (e.g., Slack, email)
         }
         failure {
             echo "Pipeline failed! ❌"
-            // Optional: Send failure notification
         }
     }
 }
