@@ -24,22 +24,20 @@ pipeline {
             }
         }
         
-        stage('Test with Docker Compose') {
-            steps {
-                // Start the stack and run tests - use bat for Windows
-                bat 'docker-compose up -d'
-                // Wait a few seconds for services to start
-                powershell 'Start-Sleep -Seconds 10'
-                // Run a simple test - check if the web server responds
-                bat 'curl -f http://localhost:5000 && echo ✓ Application responded successfully. || (echo ✗ Application failed to respond. & exit /b 1)'
-            }
-            post {
-                always {
-                    // Always tear down the test environment
-                    bat 'docker-compose down'
-                }
-            }
+       stage('Test with Docker Compose') {
+    steps {
+        bat 'docker-compose up -d'
+        // Use PowerShell to wait (more reliable)
+        powershell 'Start-Sleep -Seconds 10'
+        // Test the application
+        bat 'curl -f http://localhost:5000 && echo ✓ Application responded successfully. || (echo ✗ Application failed to respond. & exit /b 1)'
+    }
+    post {
+        always {
+            bat 'docker-compose down'
         }
+    }
+}
         
         stage('Push to Registry') {
             steps {
