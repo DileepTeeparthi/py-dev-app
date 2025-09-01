@@ -40,18 +40,15 @@ pipeline {
 }
         
         stage('Push to Registry') {
-            steps {
-                script {
-                    // Log in to Docker registry using Jenkins credentials
-                    docker.withRegistry('', env.REGISTRY_CREDENTIALS) {
-                        // Push the built image to the registry
-                        docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").push()
-                        // Also push as 'latest' (optional)
-                        docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").push('latest')
-                    }
-                }
+    steps {
+        script {
+            docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-credentials') {
+                docker.image("dileepteeparthi/devops-hello-world:build-${BUILD_NUMBER}").push()
             }
         }
+    }
+}
+
         
         stage('Deploy to Staging') {
             // This stage is optional - depends on your infrastructure
