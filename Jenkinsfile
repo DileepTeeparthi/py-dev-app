@@ -30,20 +30,22 @@ pipeline {
             }
         } // ← And this closing brace
         
-        stage('Test with Docker Compose') {
-            steps {
-                bat 'docker-compose up -d'
-                // Use PowerShell to wait
-                powershell 'Start-Sleep -Seconds 10'
-                // Test the application
-                bat 'curl -f http://localhost:5000 && echo ✓ Application responded successfully. || (echo ✗ Application failed to respond. & exit /b 1)'
-            }
-            post {
-                always {
-                    bat 'docker-compose down'
-                }
-            }
+       stage('Test with Docker Compose') {
+    steps {
+        // Stop any existing containers using port 5000
+        bat 'docker ps -q --filter "publish=5000" | findstr . && docker stop $(docker ps -q --filter "publish=5000") || echo No containers on port 5000'
+        
+        bat 'docker-compose up -d'
+        powershell 'Start-Sleep -Seconds 10'
+        bat 'curl -f http://localhost:5000 && echo ✓ Application responded successfully. || (echo ✗ Application failed to respond. & exit /b 1)'
+    }
+    post {
+        always {
+            bat 'docker-compose down'
         }
+    }
+}
+
         
         stage('Push to Registry') {
             steps {
