@@ -37,7 +37,7 @@ pipeline {
         
         bat 'docker-compose up -d'
         powershell 'Start-Sleep -Seconds 10'
-        bat 'curl -f http://localhost:5000 && echo ✓ Application responded successfully. || (echo ✗ Application failed to respond. & exit /b 1)'
+        bat 'curl -f http://localhost:5001 && echo ✓ Application responded successfully. || (echo ✗ Application failed to respond. & exit /b 1)'
     }
     post {
         always {
