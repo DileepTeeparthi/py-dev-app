@@ -4,8 +4,6 @@ pipeline {
         // Define environment variables
         DOCKER_IMAGE = 'dileepteeparthi/devops-hello-world'
         DOCKER_TAG = "build-${env.BUILD_NUMBER}"
-        // Jenkins credential ID for your container registry
-        REGISTRY_CREDENTIALS = credentials('docker-hub-credentials')
     }
     stages {
         stage('Checkout') {
@@ -18,11 +16,18 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build the Docker image, tag it with the build number
-                    docker.build("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}")
+                    withCredentials([usernamePassword(
+                        credentialsId: 'docker-hub-credentials',
+                        usernameVariable: 'REGISTRY_CREDENTIALS',
+                        passwordVariable: 'REGISTRY_CREDENTIALS_PSW'
+                    )]) {
+                        // Authenticate with Docker Hub before building
+                        bat "echo %REGISTRY_CREDENTIALS_PSW% | docker login -u %REGISTRY_CREDENTIALS% --password-stdin"
+                        // Build the Docker image, tag it with the build number
+                        docker.build("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}")
+                    }
                 }
             }
-        }
         
         stage('Test with Docker Compose') {
             steps {
@@ -39,39 +44,39 @@ pipeline {
             }
         }
         
-     stage('Push to Registry') {
-    steps {
-        script {
-            withCredentials([usernamePassword(
-                credentialsId: 'docker-hub-credentials', 
-                usernameVariable: 'DOCKER_USER', 
-                passwordVariable: 'DOCKER_PASS'
-            )]) {
-                bat """
-                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                    docker push ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}
-                    docker logout
-                """
+        stage('Push to Registry') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'docker-hub-credentials',
+                        usernameVariable: 'REGISTRY_CREDENTIALS',
+                        passwordVariable: 'REGISTRY_CREDENTIALS_PSW'
+                    )]) {
+                        bat """
+                            echo %REGISTRY_CREDENTIALS_PSW% | docker login -u %REGISTRY_CREDENTIALS% --password-stdin
+                            docker push ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}
+                            docker logout
+                        """
+                    }
+                }
             }
         }
-    }
-}
         stage('Deploy to Staging') {
             steps {
                 echo "Deployment would happen here. Configure based on your environment."
             }
         }
     }
-    post {
-        always {
-            // Clean up: remove built images to save disk space
-            bat "docker rmi ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} 2>nul || echo Image not found, skipping delete"
-        }
-        success {
-            echo "Pipeline completed successfully! 🎉"
-        }
-        failure {
-            echo "Pipeline failed! ❌"
-        }
+  post {
+    always {
+        // Clean up: remove built images and logout
+        bat "docker rmi ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} 2>nul || echo Image not found, skipping delete"
+        bat "docker logout 2>nul || echo Already logged out"
+    }
+    success {
+        echo "Pipeline completed successfully! 🎉"
+    }
+    failure {
+        echo "Pipeline failed! ❌"
     }
 }
