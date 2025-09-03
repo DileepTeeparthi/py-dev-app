@@ -33,8 +33,15 @@ pipeline {
        stage('Test with Docker Compose') {
     steps {
         // Stop any existing containers using port 5000
-        bat 'docker ps -q --filter "publish=5000" | findstr . && docker stop $(docker ps -q --filter "publish=5000") || echo No containers on port 5000'
-        
+        powershell '''
+            $containers = docker ps -q --filter "publish=5000"
+            if ($containers) {
+                docker stop $containers
+            } else {
+                Write-Host "No containers on port 5000"
+            }
+        '''
+
         bat 'docker-compose up -d'
         powershell 'Start-Sleep -Seconds 10'
         bat 'curl -f http://localhost:5001 && echo ✓ Application responded successfully. || (echo ✗ Application failed to respond. & exit /b 1)'
