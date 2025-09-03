@@ -3,7 +3,7 @@ import redis
 from flask import Flask, render_template
 
 app = Flask(__name__)
-redis_client = redis.Redis(host=os.environ.get('REDIS_HOST', 'localhost'),
+redis_client = redis.Redis(host=os.environ.get('REDIS_HOST', 'redis'),
                            port=os.environ.get('REDIS_PORT', 6379),
                            db=0, decode_responses=True)
 

@@ -39,19 +39,23 @@ pipeline {
             }
         }
         
-        stage('Push to Registry') {
-            steps {
-                script {
-                    // Use the environment variables instead of hardcoded values
-                    docker.withRegistry('', env.REGISTRY_CREDENTIALS) {
-                        docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").push()
-                        // Optional: push as latest
-                        docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").push('latest')
-                    }
-                }
+     stage('Push to Registry') {
+    steps {
+        script {
+            withCredentials([usernamePassword(
+                credentialsId: 'docker-hub-credentials', 
+                usernameVariable: 'DOCKER_USER', 
+                passwordVariable: 'DOCKER_PASS'
+            )]) {
+                bat """
+                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                    docker push ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}
+                    docker logout
+                """
             }
         }
-        
+    }
+}
         stage('Deploy to Staging') {
             steps {
                 echo "Deployment would happen here. Configure based on your environment."
