@@ -17,17 +17,18 @@ pipeline {
             steps {
                 script {
                     withCredentials([usernamePassword(
-                        credentialsId: 'docker-hub-credentials',
-                        usernameVariable: 'REGISTRY_CREDENTIALS',
-                        passwordVariable: 'REGISTRY_CREDENTIALS_PSW'
+                        credentialsId: 'docker-hub-credentials',   // 🔹 must match Jenkins ID exactly
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
                     )]) {
                         // Authenticate with Docker Hub before building
-                        bat "echo %REGISTRY_CREDENTIALS_PSW% | docker login -u %REGISTRY_CREDENTIALS% --password-stdin"
+                        bat "echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin"
                         // Build the Docker image, tag it with the build number
                         docker.build("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}")
                     }
                 }
             }
+        }
         
         stage('Test with Docker Compose') {
             steps {
@@ -48,12 +49,12 @@ pipeline {
             steps {
                 script {
                     withCredentials([usernamePassword(
-                        credentialsId: 'docker-hub-credentials',
-                        usernameVariable: 'REGISTRY_CREDENTIALS',
-                        passwordVariable: 'REGISTRY_CREDENTIALS_PSW'
+                        credentialsId: 'docker-hub-credentials',   // 🔹 same ID here
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
                     )]) {
                         bat """
-                            echo %REGISTRY_CREDENTIALS_PSW% | docker login -u %REGISTRY_CREDENTIALS% --password-stdin
+                            echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
                             docker push ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}
                             docker logout
                         """
@@ -67,16 +68,16 @@ pipeline {
             }
         }
     }
-  post {
-    always {
-        // Clean up: remove built images and logout
-        bat "docker rmi ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} 2>nul || echo Image not found, skipping delete"
-        bat "docker logout 2>nul || echo Already logged out"
-    }
-    success {
-        echo "Pipeline completed successfully! 🎉"
-    }
-    failure {
-        echo "Pipeline failed! ❌"
+    post {
+        always {
+            // Clean up: remove built images to save disk space
+            bat "docker rmi ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} 2>nul || echo Image not found, skipping delete"
+        }
+        success {
+            echo "Pipeline completed successfully! 🎉"
+        }
+        failure {
+            echo "Pipeline failed! ❌"
+        }
     }
 }
