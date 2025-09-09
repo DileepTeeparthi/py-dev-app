@@ -8,7 +8,7 @@ services:
   web:
     build: .
     ports:
-      - "5001:5000"
+      - "5002:5000"
     environment:
       - REDIS_HOST=redis  # uses Docker Compose's DNS to find the 'redis' service
       - HOSTNAME=local-docker
