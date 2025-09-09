@@ -1,15 +1,15 @@
 pipeline {
     agent any
     environment {
-        // Define environment variables
         DOCKER_IMAGE = 'dileepteeparthi/devops-hello-world'
         DOCKER_TAG = "build-${env.BUILD_NUMBER}"
     }
     stages {
         stage('Checkout') {
             steps {
-                // Get the code from your repository
-                git branch: 'master', url: 'https://github.com/DileepTeeparthi/py-dev-app.git', credentialsId: 'devdoc'
+                git branch: 'master', 
+                url: 'https://github.com/DileepTeeparthi/py-dev-app.git', 
+                credentialsId: 'devdoc'
             }
         }
         
@@ -21,38 +21,33 @@ pipeline {
                         usernameVariable: 'REGISTRY_CREDENTIALS',
                         passwordVariable: 'REGISTRY_CREDENTIALS_PSW'
                     )]) {
-                        // Authenticate with Docker Hub before building
                         bat "echo %REGISTRY_CREDENTIALS_PSW% | docker login -u %REGISTRY_CREDENTIALS% --password-stdin"
-                        // Build the Docker image, tag it with the build number
-                        docker.build("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}")
-                    } // ← This closing brace was missing
+                        bat "docker build -t ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} ."
+                    }
                 }
             }
-        } // ← And this closing brace
-        
-       stage('Test with Docker Compose') {
-    steps {
-        // Stop any existing containers using port 5000
-        powershell '''
-            $containers = docker ps -q --filter "publish=5002"
-            if ($containers) {
-                docker stop $containers
-            } else {
-                Write-Host "No containers on port 5002"
-            }
-        '''
-
-        bat 'docker-compose up -d'
-        powershell 'Start-Sleep -Seconds 10'
-        bat 'curl -f http://localhost:5002 && echo ✓ Application responded successfully. || (echo ✗ Application failed to respond. & exit /b 1)'
-    }
-    post {
-        always {
-            bat 'docker-compose down'
         }
-    }
-}
-
+        
+        stage('Test with Docker Compose') {
+            steps {
+                powershell '''
+                    $containers = docker ps -q --filter "publish=5002"
+                    if ($containers) {
+                        docker stop $containers
+                    } else {
+                        Write-Host "No containers on port 5002"
+                    }
+                '''
+                bat 'docker-compose up -d'
+                powershell 'Start-Sleep -Seconds 10'
+                bat 'curl -f http://localhost:5002 && echo ✓ Application responded successfully. || (echo ✗ Application failed to respond. & exit /b 1)'
+            }
+            post {
+                always {
+                    bat 'docker-compose down'
+                }
+            }
+        }
         
         stage('Push to Registry') {
             steps {
@@ -72,19 +67,37 @@ pipeline {
             }
         }
         
+        stage('Prepare Kubernetes') {
+            steps {
+                script {
+                    bat 'minikube status || minikube start --driver=docker --force'
+                    bat 'kubectl config use-context minikube'
+                    bat 'timeout 30 kubectl get nodes || echo "Kubernetes cluster initializing..."'
+                }
+            }
+        }
+        
         stage('Deploy to Kubernetes') {
             steps {
-                powershell """
-                    (Get-Content k8s-deployment.yaml) -replace 'dileepteeparthi/devops-hello-world:blue', '${env.DOCKER_IMAGE}:${env.DOCKER_TAG}' | Set-Content k8s-deployment.yaml
-                """
-                bat 'kubectl apply -f k8s-deployment.yaml'
-                bat 'kubectl rollout status deployment/devops-hello-world --timeout=90s'
+                script {
+                    // Update the image in deployment file
+                    powershell """
+                        (Get-Content k8s-deployment.yaml) -replace 'dileepteeparthi/devops-hello-world:blue', '${env.DOCKER_IMAGE}:${env.DOCKER_TAG}' | Set-Content k8s-deployment.yaml
+                    """
+                    // Apply deployment
+                    bat 'kubectl apply -f k8s-deployment.yaml --validate=false'
+                    // Wait for rollout to complete
+                    bat 'kubectl rollout status deployment/devops-hello-world --timeout=120s'
+                    
+                    // Get application URL
+                    def SERVICE_URL = bat(script: 'minikube service devops-hello-world-service --url', returnStdout: true).trim()
+                    echo "🎉 Application deployed successfully! Access it at: ${SERVICE_URL}"
+                }
             }
         }
     }
     post {
         always {
-            // Clean up: remove built images and logout
             bat "docker rmi ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} 2>nul || echo Image not found, skipping delete"
             bat "docker logout 2>nul || echo Already logged out"
         }
