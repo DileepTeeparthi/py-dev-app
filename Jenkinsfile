@@ -72,9 +72,13 @@ pipeline {
             }
         }
         
-        stage('Deploy to Staging') {
+        stage('Deploy to Kubernetes') {
             steps {
-                echo "Deployment would happen here. Configure based on your environment."
+                powershell """
+                    (Get-Content k8s-deployment.yaml) -replace 'dileepteeparthi/devops-hello-world:blue', '${env.DOCKER_IMAGE}:${env.DOCKER_TAG}' | Set-Content k8s-deployment.yaml
+                """
+                bat 'kubectl apply -f k8s-deployment.yaml'
+                bat 'kubectl rollout status deployment/devops-hello-world --timeout=90s'
             }
         }
     }
