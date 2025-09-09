@@ -46,7 +46,8 @@ spec:
     spec:
       containers:
       - name: flask-app
-        image: dileepteeparthi/devops-hello-world:blue
+        image: dileepteeparthi/devops-hello-world:test
+        imagePullPolicy: Never
         ports:
         - containerPort: 5000
         env:
