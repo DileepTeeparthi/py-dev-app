@@ -70,8 +70,10 @@ pipeline {
         stage('Prepare Kubernetes') {
             steps {
                 script {
-                    bat 'minikube status || minikube start --driver=docker --force'
-                    bat 'kubectl config use-context minikube'
+                    // SWITCHED: Use Docker Desktop instead of Minikube
+                    bat 'kubectl config use-context docker-desktop'
+                    
+                    // Wait for Kubernetes to be ready with timeout
                     bat 'timeout 30 kubectl get nodes || echo "Kubernetes cluster initializing..."'
                 }
             }
@@ -84,14 +86,20 @@ pipeline {
                     powershell """
                         (Get-Content k8s-deployment.yaml) -replace 'dileepteeparthi/devops-hello-world:blue', '${env.DOCKER_IMAGE}:${env.DOCKER_TAG}' | Set-Content k8s-deployment.yaml
                     """
+                    
                     // Apply deployment
                     bat 'kubectl apply -f k8s-deployment.yaml --validate=false'
+                    
                     // Wait for rollout to complete
                     bat 'kubectl rollout status deployment/devops-hello-world --timeout=120s'
                     
-                    // Get application URL
-                    def SERVICE_URL = bat(script: 'minikube service devops-hello-world-service --url', returnStdout: true).trim()
-                    echo "🎉 Application deployed successfully! Access it at: ${SERVICE_URL}"
+                    // SWITCHED: Get ClusterIP instead of Minikube URL
+                    def CLUSTER_IP = bat(script: 'kubectl get service devops-hello-world-service -o jsonpath="{.spec.clusterIP}"', returnStdout: true).trim()
+                    echo "🎉 Application deployed successfully! Access internally at: http://${CLUSTER_IP}"
+                    
+                    // Optional: Create port-forward for external access
+                    bat 'start /B kubectl port-forward service/devops-hello-world-service 8080:80'
+                    echo "🌐 External access: http://localhost:8080"
                 }
             }
         }
