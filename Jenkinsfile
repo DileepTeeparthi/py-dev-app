@@ -117,6 +117,7 @@ stage('Deploy to Kubernetes') {
         }
     }
 }
+}
     post {
         always {
             bat "docker rmi ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} 2>nul || echo Image not found, skipping delete"
